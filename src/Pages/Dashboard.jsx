@@ -12,14 +12,15 @@ const cardVariants = {
 };
 
 const Dashboard = () => {
-  const { rumahId } = useParams();
+  const { rumahId } = useParams(); // e.g., 'rumah1'
   const [house, setHouse] = useState(null);
   const [latestData, setLatestData] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState('');
 
   useEffect(() => {
-    const houseRef = doc(db, 'houses', rumahId.replace('rumah', ''));
+    // Fetch house data from 'houses' collection
+    const houseRef = doc(db, 'houses', rumahId); // Use rumahId directly
     const unsubscribeHouse = onSnapshot(
       houseRef,
       (doc) => {
@@ -40,6 +41,7 @@ const Dashboard = () => {
       }
     );
 
+    // Fetch latest sensor data from 'monitoring/rumahX/data'
     const dataQuery = query(
       collection(db, `monitoring/${rumahId}/data`),
       orderBy('timestamp', 'desc'),
@@ -74,7 +76,7 @@ const Dashboard = () => {
     if (!latestData || !house) return;
 
     try {
-      const settingsRef = doc(db, 'settings', rumahId);
+      const settingsRef = doc(db, 'settings', rumahId); // Use rumahId directly
       const settingsDoc = await getDoc(settingsRef);
       const settings = settingsDoc.exists() ? settingsDoc.data() : {
         compostTempNormal: 25,
@@ -109,7 +111,7 @@ const Dashboard = () => {
           : 'Normal';
 
       await setDoc(
-        doc(db, 'houses', rumahId.replace('rumah', '')),
+        doc(db, 'houses', rumahId), // Use rumahId directly
         {
           name: house.name,
           compostStatus,
@@ -261,3 +263,4 @@ const Dashboard = () => {
 };
 
 export default Dashboard;
+// ========

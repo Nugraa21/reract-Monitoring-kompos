@@ -1,12 +1,11 @@
 import { NavLink, useLocation } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { FaHome, FaHistory, FaCog, FaPlug, FaBars, FaTimes } from 'react-icons/fa';
+import { FaHome, FaPlug, FaBars, FaTimes, FaCog } from 'react-icons/fa';
 
 const navItems = [
   { name: 'Beranda', path: '/', icon: <FaHome />, ariaLabel: 'Beranda' },
   { name: 'Koneksi', path: '/koneksi', icon: <FaPlug />, ariaLabel: 'Koneksi' },
-  { name: 'History', path: '/history', icon: <FaHistory />, ariaLabel: 'History' },
-  { name: 'Ambang Batas', path: '/thresholds', icon: <FaCog />, ariaLabel: 'Ambang Batas' },
+  { name: 'Pengaturan', path: '/settings', icon: <FaCog />, ariaLabel: 'Pengaturan' },
 ];
 
 const navItemVariants = {
