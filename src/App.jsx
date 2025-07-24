@@ -2,7 +2,7 @@ import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import NavBar from './components/NavBar';
 import Home from './Pages/Home';
 import History from './Pages/History';
-import Settings from './Pages/Settings';
+import Thresholds from './Pages/Thresholds';
 import Dashboard from './Pages/Dashboard';
 import Koneksi from './Pages/Koneksi';
 import { useState } from 'react';
@@ -21,7 +21,7 @@ const App = () => {
         <Routes>
           <Route path="/" element={<Home />} />
           <Route path="/history" element={<History />} />
-          <Route path="/settings" element={<Settings />} />
+          <Route path="/thresholds" element={<Thresholds />} />
           <Route path="/koneksi" element={<Koneksi />} />
           <Route path="/dashboard/:rumahId" element={<Dashboard />} />
         </Routes>

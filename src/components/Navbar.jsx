@@ -6,7 +6,7 @@ const navItems = [
   { name: 'Beranda', path: '/', icon: <FaHome />, ariaLabel: 'Beranda' },
   { name: 'Koneksi', path: '/koneksi', icon: <FaPlug />, ariaLabel: 'Koneksi' },
   { name: 'History', path: '/history', icon: <FaHistory />, ariaLabel: 'History' },
-  { name: 'Pengaturan', path: '/settings', icon: <FaCog />, ariaLabel: 'Pengaturan' },
+  { name: 'Ambang Batas', path: '/thresholds', icon: <FaCog />, ariaLabel: 'Ambang Batas' },
 ];
 
 const navItemVariants = {

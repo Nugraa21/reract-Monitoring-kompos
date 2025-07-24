@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { db } from '../firebase';
-import { collection, query, getDocs, onSnapshot, deleteDoc } from 'firebase/firestore';
+import { collection, query, getDocs, onSnapshot, deleteDoc, doc, getDoc } from 'firebase/firestore';
 
 const cardVariants = {
   initial: { opacity: 0, y: 20 },
@@ -23,13 +23,19 @@ const History = () => {
     const unsubscribeHouses = onSnapshot(
       collection(db, 'houses'),
       (snapshot) => {
-        const houseList = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        const houseList = snapshot.docs.map(doc => ({
+          id: doc.id,
+          ...doc.data(),
+          name: doc.data().name || `Rumah ${doc.id}`,
+        }));
         console.log('History - Fetched houses:', houseList);
         setHouses(houseList);
+        setIsLoading(false);
       },
       (err) => {
         console.error('History - Error fetching houses:', err);
         setError('Gagal memuat daftar rumah: ' + err.message);
+        setIsLoading(false);
       }
     );
 
@@ -41,30 +47,62 @@ const History = () => {
         const snapshot = await getDocs(monitoringRef);
         for (const houseDoc of snapshot.docs) {
           const houseId = houseDoc.id.replace('rumah', '');
+          const settingsRef = doc(db, 'settings', `rumah${houseId}`);
+          const settingsDoc = await getDoc(settingsRef);
+          const settings = settingsDoc.exists() ? settingsDoc.data() : {
+            compostTempNormal: 25,
+            compostTempCheck: 32.5,
+            compostTempFull: 40,
+            compostVolumeNormal: 50,
+            compostVolumeCheck: 75,
+            compostVolumeFull: 100,
+            trashVolumeNormal: 50,
+            trashVolumeCheck: 75,
+            trashVolumeFull: 100,
+          };
+          console.log(`History - Fetched settings for rumah${houseId}:`, settings);
+
           const dataQuery = query(collection(db, `monitoring/rumah${houseId}/data`));
           const dataSnapshot = await getDocs(dataQuery);
-          const house = houses.find(h => h.id === houseId) || { name: `Rumah ${houseId}`, compostStatus: 'Normal', trashStatus: 'Normal' };
-          console.log(`History - Fetched data for rumah${houseId}:`, dataSnapshot.docs.map(doc => doc.data()));
+          const house = houses.find(h => h.id === houseId) || { name: `Rumah ${houseId}` };
+
           dataSnapshot.forEach(doc => {
             const data = doc.data();
+            const suhu = parseFloat(data.suhu) || 0;
+            const jarak1 = parseFloat(data.jarak1) || 0;
+            const jarak2 = parseFloat(data.jarak2) || 0;
+
+            const compostStatus =
+              suhu >= settings.compostTempFull || jarak1 >= settings.compostVolumeFull
+                ? 'Penuh'
+                : suhu >= settings.compostTempCheck || jarak1 >= settings.compostVolumeCheck
+                ? 'Perlu Diperiksa'
+                : 'Normal';
+            const trashStatus =
+              jarak2 >= settings.trashVolumeFull
+                ? 'Penuh'
+                : jarak2 >= settings.trashVolumeCheck
+                ? 'Perlu Diperiksa'
+                : 'Normal';
+
             historyData.push({
               id: doc.id,
               houseId,
               houseName: house.name,
               type: 'Kompos',
-              suhu: parseFloat(data.suhu) || 0,
-              volume: parseFloat(data.jarak1) || 0,
-              status: house.compostStatus || 'Normal',
-              timestamp: data.timestamp ? data.timestamp.toDate() : new Date()
+              suhu,
+              volume: jarak1,
+              status: compostStatus,
+              timestamp: data.timestamp ? data.timestamp.toDate() : new Date(),
             });
             historyData.push({
               id: doc.id + '-trash',
               houseId,
               houseName: house.name,
               type: 'Sampah',
-              volume: parseFloat(data.jarak2) || 0,
-              status: house.trashStatus || 'Normal',
-              timestamp: data.timestamp ? data.timestamp.toDate() : new Date()
+              volume: jarak2,
+              status: trashStatus,
+              timestamp: data.timestamp ? data.timestamp.toDate() : new Date(),
             });
           });
         }
@@ -79,7 +117,10 @@ const History = () => {
       }
     };
 
-    fetchHistory();
+    if (houses.length > 0) {
+      fetchHistory();
+    }
+
     return () => unsubscribeHouses();
   }, [houses]);
 
@@ -97,24 +138,27 @@ const History = () => {
   });
 
   const clearHistory = async () => {
-    if (window.confirm('Apakah Anda yakin ingin menghapus semua riwayat?')) {
-      try {
-        const monitoringRef = collection(db, 'monitoring');
-        const snapshot = await getDocs(monitoringRef);
-        for (const houseDoc of snapshot.docs) {
-          const dataQuery = collection(db, `monitoring/${houseDoc.id}/data`);
-          const dataSnapshot = await getDocs(dataQuery);
-          for (const doc of dataSnapshot.docs) {
-            await deleteDoc(doc.ref);
-            console.log(`History - Deleted document: monitoring/${houseDoc.id}/data/${doc.id}`);
-          }
+    if (!window.confirm('Apakah Anda yakin ingin menghapus semua riwayat?')) {
+      return;
+    }
+    try {
+      const monitoringRef = collection(db, 'monitoring');
+      const snapshot = await getDocs(monitoringRef);
+      for (const houseDoc of snapshot.docs) {
+        const dataQuery = collection(db, `monitoring/${houseDoc.id}/data`);
+        const dataSnapshot = await getDocs(dataQuery);
+        for (const doc of dataSnapshot.docs) {
+          await deleteDoc(doc.ref);
+          console.log(`History - Deleted document: monitoring/${houseDoc.id}/data/${doc.id}`);
         }
-        setHistory([]);
-        console.log('History - Cleared all history');
-      } catch (err) {
-        console.error('History - Error clearing history:', err);
-        setError('Gagal menghapus riwayat: ' + err.message);
       }
+      setHistory([]);
+      setSuccess('Riwayat berhasil dihapus');
+      console.log('History - Cleared all history');
+      setTimeout(() => setSuccess(''), 3000);
+    } catch (err) {
+      console.error('History - Error clearing history:', err);
+      setError('Gagal menghapus riwayat: ' + err.message);
     }
   };
 
@@ -125,7 +169,7 @@ const History = () => {
     });
 
   const getStatusBadge = (status) => {
-    const base = "inline-block px-3 py-1 rounded-full text-sm font-medium";
+    const base = 'inline-block px-3 py-1 rounded-full text-sm font-medium';
     switch (status) {
       case 'Normal':
         return <span className={`${base} bg-green-100 text-green-700`}>{status}</span>;
@@ -139,22 +183,38 @@ const History = () => {
   };
 
   return (
-    <div className="p-6 bg-gradient-to-br from-gray-50 to-gray-200 min-h-screen" style={{ fontFamily: 'Poppins, sans-serif' }}>
+    <div className="p-6 bg-gradient-to-br from-green-50 to-teal-100 min-h-screen" style={{ fontFamily: 'Poppins, sans-serif' }}>
       <div className="max-w-7xl mx-auto">
-        <h1 className="text-4xl font-bold text-green-600 mb-8">Riwayat Sensor</h1>
+        <motion.h1
+          initial={{ opacity: 0, y: -20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5 }}
+          className="text-4xl font-bold text-green-700 mb-8"
+        >
+          Riwayat Sensor
+        </motion.h1>
         {error && (
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
-            className="text-center p-6 bg-red-100 rounded-xl shadow-md mb-6"
+            className="text-center p-6 bg-red-100 rounded-2xl shadow-lg mb-6"
           >
-            <p className="text-lg text-red-600">{error}</p>
+            <p className="text-lg text-red-700">{error}</p>
+          </motion.div>
+        )}
+        {success && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            className="text-center p-6 bg-green-100 rounded-2xl shadow-lg mb-6"
+          >
+            <p className="text-lg text-green-700">{success}</p>
           </motion.div>
         )}
         <motion.div
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
-          className="bg-white p-6 rounded-xl shadow-lg mb-8 space-y-4"
+          className="bg-white p-6 rounded-2xl shadow-lg mb-8 space-y-4"
         >
           <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
             <div>
@@ -162,7 +222,7 @@ const History = () => {
               <select
                 value={filterHouseId}
                 onChange={(e) => setFilterHouseId(e.target.value)}
-                className="w-full border border-gray-300 rounded-lg px-4 py-2 focus:ring-green-500 focus:border-green-500"
+                className="w-full border border-gray-300 rounded-lg px-4 py-2 bg-gray-50 text-gray-800 focus:ring-2 focus:ring-green-500 focus:border-green-500"
               >
                 <option value="">Semua Rumah</option>
                 {houses.map((house) => (
@@ -175,7 +235,7 @@ const History = () => {
               <select
                 value={filterStatus}
                 onChange={(e) => setFilterStatus(e.target.value)}
-                className="w-full border border-gray-300 rounded-lg px-4 py-2 focus:ring-green-500 focus:border-green-500"
+                className="w-full border border-gray-300 rounded-lg px-4 py-2 bg-gray-50 text-gray-800 focus:ring-2 focus:ring-green-500 focus:border-green-500"
               >
                 <option value="">Semua Status</option>
                 <option value="Normal">Normal</option>
@@ -189,7 +249,7 @@ const History = () => {
                 type="date"
                 value={dateFrom}
                 onChange={(e) => setDateFrom(e.target.value)}
-                className="w-full border border-gray-300 rounded-lg px-4 py-2 focus:ring-green-500 focus:border-green-500"
+                className="w-full border border-gray-300 rounded-lg px-4 py-2 bg-gray-50 text-gray-800 focus:ring-2 focus:ring-green-500 focus:border-green-500"
               />
             </div>
             <div>
@@ -198,15 +258,16 @@ const History = () => {
                 type="date"
                 value={dateTo}
                 onChange={(e) => setDateTo(e.target.value)}
-                className="w-full border border-gray-300 rounded-lg px-4 py-2 focus:ring-green-500 focus:border-green-500"
+                className="w-full border border-gray-300 rounded-lg px-4 py-2 bg-gray-50 text-gray-800 focus:ring-2 focus:ring-green-500 focus:border-green-500"
               />
             </div>
             <div className="flex items-end">
               <motion.button
                 onClick={clearHistory}
-                className="w-full px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-all"
+                className="w-full px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-all shadow-md"
                 whileHover={{ scale: 1.05 }}
                 whileTap={{ scale: 0.95 }}
+                title="Hapus semua riwayat sensor"
               >
                 Hapus Riwayat
               </motion.button>
@@ -217,17 +278,25 @@ const History = () => {
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
-            className="bg-white p-6 rounded-xl shadow-md text-center"
+            className="bg-white p-6 rounded-2xl shadow-lg text-center"
           >
-            <p className="text-gray-600">Memuat riwayat data...</p>
+            <p className="text-lg text-gray-600">Memuat riwayat data...</p>
+          </motion.div>
+        ) : houses.length === 0 ? (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            className="bg-white p-6 rounded-2xl shadow-lg text-center"
+          >
+            <p className="text-lg text-gray-600">Tidak ada rumah terdeteksi. Pastikan backend berjalan.</p>
           </motion.div>
         ) : filteredHistory.length === 0 ? (
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
-            className="bg-white p-6 rounded-xl shadow-md text-center"
+            className="bg-white p-6 rounded-2xl shadow-lg text-center"
           >
-            <p className="text-gray-600">Belum ada riwayat data sensor yang sesuai. Pastikan data tersedia di Firestore.</p>
+            <p className="text-lg text-gray-600">Belum ada riwayat data sensor yang sesuai. Pastikan data tersedia di Firestore.</p>
           </motion.div>
         ) : (
           <div className="space-y-4">
@@ -238,32 +307,32 @@ const History = () => {
                 initial="initial"
                 animate="animate"
                 whileHover="hover"
-                className="bg-white p-6 rounded-xl shadow-md"
+                className="bg-white p-6 rounded-2xl shadow-lg"
               >
                 <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
                   <div>
                     <p className="text-sm text-gray-500">🏠 Rumah</p>
-                    <p className="text-base font-medium">{entry.houseName}</p>
+                    <p className="text-base font-medium text-gray-800">{entry.houseName}</p>
                   </div>
                   <div>
                     <p className="text-sm text-gray-500">🧪 Jenis</p>
-                    <p className="text-base font-medium">{entry.type}</p>
+                    <p className="text-base font-medium text-gray-800">{entry.type}</p>
                   </div>
                   <div>
                     <p className="text-sm text-gray-500">{entry.type === 'Kompos' ? '🌡️ Suhu' : '🗑️ Volume'}</p>
-                    <p className="text-base font-medium">
+                    <p className="text-base font-medium text-gray-800">
                       {entry.type === 'Kompos' ? `${entry.suhu.toFixed(1)}°C` : `${entry.volume}%`}
                     </p>
                   </div>
                   <div>
                     <p className="text-sm text-gray-500">{entry.type === 'Kompos' ? '💧 Volume' : '📍 Status'}</p>
-                    <p className="text-base font-medium">
+                    <p className="text-base font-medium text-gray-800">
                       {entry.type === 'Kompos' ? `${entry.volume}%` : getStatusBadge(entry.status)}
                     </p>
                   </div>
                   <div>
                     <p className="text-sm text-gray-500">⏰ Waktu</p>
-                    <p className="text-base font-medium">{formatTimestamp(entry.timestamp)}</p>
+                    <p className="text-base font-medium text-gray-800">{formatTimestamp(entry.timestamp)}</p>
                   </div>
                 </div>
                 <div className="mt-4">
