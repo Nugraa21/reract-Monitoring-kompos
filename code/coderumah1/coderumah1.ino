@@ -12,7 +12,7 @@ const int mqtt_port = 1883;
 const char* mqtt_topic = "kompos/monitoring";
 
 // --- Konfigurasi Tambahan ---
-#define RUMAH_ID "1" // <-- TAMBAHAN: Ganti dengan ID rumah yang sesuai
+#define RUMAH_ID "2" // <-- TAMBAHAN: Ganti dengan ID rumah yang sesuai
 
 WiFiClient espClient;
 PubSubClient client(espClient);
