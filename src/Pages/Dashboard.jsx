@@ -96,8 +96,8 @@ const Dashboard = () => {
       const settingsRef = doc(db, 'settings', rumahId);
       getDoc(settingsRef).then((settingsDoc) => {
         const defaultSettings = {
-          compostTempNormal: 25,
-          compostTempCheck: 32.5,
+          compostTempNormal: 34,
+          compostTempCheck: 39.5,
           compostTempFull: 40,
           compostVolumeNormal: 50,
           compostVolumeCheck: 75,
