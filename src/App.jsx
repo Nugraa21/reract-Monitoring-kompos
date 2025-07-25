@@ -1,10 +1,9 @@
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import NavBar from './components/NavBar';
 import Home from './Pages/Home';
-import History from './Pages/History';
-import Thresholds from './Pages/Thresholds';
+import Settings from './Pages/Settings';
 import Dashboard from './Pages/Dashboard';
-import Koneksi from './Pages/Koneksi';
+import History from './Pages/History';
 import { useState } from 'react';
 
 const App = () => {
@@ -21,8 +20,7 @@ const App = () => {
         <Routes>
           <Route path="/" element={<Home />} />
           <Route path="/history" element={<History />} />
-          <Route path="/thresholds" element={<Thresholds />} />
-          <Route path="/koneksi" element={<Koneksi />} />
+          <Route path="/settings" element={<Settings />} />
           <Route path="/dashboard/:rumahId" element={<Dashboard />} />
         </Routes>
       </div>

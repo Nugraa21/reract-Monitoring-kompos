@@ -1,9 +1,9 @@
-import { useParams, Link, Navigate } from 'react-router-dom';
+import { useParams, Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { FaArrowLeft, FaTemperatureHigh, FaTrashAlt } from 'react-icons/fa';
 import { useState, useEffect } from 'react';
 import { db } from '../firebase';
-import { doc, onSnapshot, collection, query, orderBy, limit, getDoc, setDoc } from 'firebase/firestore';
+import { doc, onSnapshot, collection, query, orderBy, limit, getDoc } from 'firebase/firestore';
 
 const cardVariants = {
   initial: { opacity: 0, y: 20 },
@@ -12,27 +12,40 @@ const cardVariants = {
 };
 
 const Dashboard = () => {
-  const { rumahId } = useParams(); // e.g., 'rumah1'
+  const { rumahId } = useParams();
   const [house, setHouse] = useState(null);
   const [latestData, setLatestData] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState('');
 
+  // Inisialisasi dan validasi rumahId
   useEffect(() => {
-    // Fetch house data from 'houses' collection
-    const houseRef = doc(db, 'houses', rumahId); // Use rumahId directly
+    setIsLoading(true);
+    setError('');
+    if (!rumahId || !rumahId.startsWith('rumah')) {
+      setError(`Format rumahId tidak valid. Harus berupa "rumahX". Diterima: ${rumahId}`);
+      setIsLoading(false);
+      return;
+    }
+  }, [rumahId]);
+
+  // Mengambil data rumah
+  useEffect(() => {
+    if (error || !rumahId) return;
+
+    const houseRef = doc(db, 'houses', rumahId);
+
     const unsubscribeHouse = onSnapshot(
       houseRef,
       (doc) => {
         if (doc.exists()) {
-          setHouse({ id: doc.id, ...doc.data(), name: doc.data().name || `Rumah ${doc.id}` });
-          console.log('Dashboard - Fetched house:', { id: doc.id, ...doc.data() });
+          const houseData = { id: doc.id, ...doc.data(), name: doc.data().name || rumahId.replace(/^rumah/, '') };
+          setHouse(houseData);
+          console.log('Dashboard - Fetched house:', houseData);
         } else {
-          setHouse(null);
-          console.log(`Dashboard - House ${rumahId} not found in houses collection`);
-          setError(`Rumah ${rumahId} tidak ditemukan`);
+          setError(`Rumah ${rumahId} tidak ditemukan di Firestore.`);
         }
-        setIsLoading(false);
+        setIsLoading(false); // Pastikan isLoading diatur ke false di sini
       },
       (err) => {
         console.error('Dashboard - Error fetching house:', err);
@@ -41,7 +54,13 @@ const Dashboard = () => {
       }
     );
 
-    // Fetch latest sensor data from 'monitoring/rumahX/data'
+    return () => unsubscribeHouse();
+  }, [rumahId, error]);
+
+  // Mengambil data sensor terbaru
+  useEffect(() => {
+    if (error || !rumahId) return;
+
     const dataQuery = query(
       collection(db, `monitoring/${rumahId}/data`),
       orderBy('timestamp', 'desc'),
@@ -52,13 +71,13 @@ const Dashboard = () => {
       (snapshot) => {
         if (!snapshot.empty) {
           const data = snapshot.docs[0].data();
-          setLatestData(data);
+          setLatestData({ ...data, timestamp: data.timestamp?.toDate().toLocaleString('id-ID') || 'Tidak ada timestamp' });
           console.log('Dashboard - Latest data:', data);
         } else {
           setLatestData(null);
-          console.log(`Dashboard - No data found in monitoring/${rumahId}/data`);
-          setError(`Tidak ada data sensor untuk ${rumahId}`);
+          setError(`Tidak ada data sensor untuk ${rumahId}.`);
         }
+        // isLoading tidak diatur ulang di sini karena sudah ditangani di useEffect pertama
       },
       (err) => {
         console.error('Dashboard - Error fetching data:', err);
@@ -66,64 +85,62 @@ const Dashboard = () => {
       }
     );
 
-    return () => {
-      unsubscribeHouse();
-      unsubscribeData();
-    };
-  }, [rumahId]);
+    return () => unsubscribeData();
+  }, [rumahId, error]);
 
-  const calculateStatus = async () => {
+  // Menghitung status secara lokal
+  const calculateStatus = () => {
     if (!latestData || !house) return;
 
     try {
-      const settingsRef = doc(db, 'settings', rumahId); // Use rumahId directly
-      const settingsDoc = await getDoc(settingsRef);
-      const settings = settingsDoc.exists() ? settingsDoc.data() : {
-        compostTempNormal: 25,
-        compostTempCheck: 32.5,
-        compostTempFull: 40,
-        compostVolumeNormal: 50,
-        compostVolumeCheck: 75,
-        compostVolumeFull: 100,
-        trashVolumeNormal: 50,
-        trashVolumeCheck: 75,
-        trashVolumeFull: 100,
-      };
-      console.log(`Dashboard - Fetched settings for ${rumahId}:`, settings);
+      const settingsRef = doc(db, 'settings', rumahId);
+      getDoc(settingsRef).then((settingsDoc) => {
+        const defaultSettings = {
+          compostTempNormal: 25,
+          compostTempCheck: 32.5,
+          compostTempFull: 40,
+          compostVolumeNormal: 50,
+          compostVolumeCheck: 75,
+          compostVolumeFull: 100,
+          trashVolumeNormal: 50,
+          trashVolumeCheck: 75,
+          trashVolumeFull: 100,
+        };
+        const settings = settingsDoc.exists() ? settingsDoc.data() : defaultSettings;
 
-      const compostData = {
-        suhu: parseFloat(latestData.suhu) || 0,
-        volume: parseFloat(latestData.jarak1) || 0,
-      };
-      const trashData = { volume: parseFloat(latestData.jarak2) || 0 };
+        const validatedSettings = {};
+        Object.keys(defaultSettings).forEach((key) => {
+          validatedSettings[key] = isNaN(parseFloat(settings[key])) ? defaultSettings[key] : parseFloat(settings[key]);
+        });
 
-      const compostStatus =
-        compostData.suhu >= settings.compostTempFull || compostData.volume >= settings.compostVolumeFull
-          ? 'Penuh'
-          : compostData.suhu >= settings.compostTempCheck || compostData.volume >= settings.compostVolumeCheck
-          ? 'Perlu Diperiksa'
-          : 'Normal';
-      const trashStatus =
-        trashData.volume >= settings.trashVolumeFull
-          ? 'Penuh'
-          : trashData.volume >= settings.trashVolumeCheck
-          ? 'Perlu Diperiksa'
-          : 'Normal';
+        const compostData = {
+          suhu: parseFloat(latestData.suhu) || 0,
+          volume: parseFloat(latestData.jarak1) || 0,
+        };
+        const trashData = { volume: parseFloat(latestData.jarak2) || 0 };
 
-      await setDoc(
-        doc(db, 'houses', rumahId), // Use rumahId directly
-        {
-          name: house.name,
-          compostStatus,
-          trashStatus,
-          lastUpdated: new Date(),
-        },
-        { merge: true }
-      );
-      console.log(`Dashboard - Updated house ${rumahId} with statuses: compost=${compostStatus}, trash=${trashStatus}`);
+        const compostStatus =
+          compostData.suhu >= validatedSettings.compostTempFull || compostData.volume >= validatedSettings.compostVolumeFull
+            ? 'Penuh'
+            : compostData.suhu >= validatedSettings.compostTempCheck || compostData.volume >= validatedSettings.compostVolumeCheck
+            ? 'Perlu Diperiksa'
+            : 'Normal';
+        const trashStatus =
+          trashData.volume >= validatedSettings.trashVolumeFull
+            ? 'Penuh'
+            : trashData.volume >= validatedSettings.trashVolumeCheck
+            ? 'Perlu Diperiksa'
+            : 'Normal';
+
+        setHouse(prev => ({ ...prev, compostStatus, trashStatus }));
+        console.log(`Dashboard - Calculated statuses locally: compost=${compostStatus}, trash=${trashStatus}`);
+      }).catch((err) => {
+        console.error('Dashboard - Error fetching settings:', err);
+        setError('Gagal memuat pengaturan: ' + err.message);
+      });
     } catch (err) {
       console.error('Dashboard - Error calculating status:', err);
-      setError('Gagal memperbarui status: ' + err.message);
+      setError('Gagal menghitung status: ' + err.message);
     }
   };
 
@@ -149,8 +166,32 @@ const Dashboard = () => {
     );
   }
 
-  if (!house) {
-    return <Navigate to="/" replace />;
+  if (error || !house) {
+    return (
+      <div className="p-6 bg-gradient-to-br from-green-50 to-teal-100 min-h-screen" style={{ fontFamily: 'Poppins, sans-serif' }}>
+        <div className="max-w-6xl mx-auto">
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            className="text-center p-6 bg-red-100 rounded-2xl shadow-lg"
+          >
+            <p className="text-lg text-red-700">{error || 'Rumah tidak ditemukan'}</p>
+            <button
+              onClick={() => window.location.reload()}
+              className="mt-4 px-4 py-2 bg-blue-600 text-white rounded-lg"
+            >
+              Coba Lagi
+            </button>
+            <Link
+              to="/"
+              className="mt-4 ml-4 inline-block px-4 py-2 bg-green-600 text-white rounded-lg"
+            >
+              Kembali ke Beranda
+            </Link>
+          </motion.div>
+        </div>
+      </div>
+    );
   }
 
   return (
@@ -170,15 +211,6 @@ const Dashboard = () => {
             Dashboard: <span className="text-green-700">{house.name}</span>
           </h1>
         </div>
-        {error && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            className="text-center p-6 bg-red-100 rounded-2xl shadow-lg mb-6"
-          >
-            <p className="text-lg text-red-700">{error}</p>
-          </motion.div>
-        )}
         {latestData ? (
           <div className="grid md:grid-cols-2 gap-6">
             <motion.div variants={cardVariants} initial="initial" animate="animate" whileHover="hover">
@@ -253,8 +285,14 @@ const Dashboard = () => {
             className="text-center p-6 bg-white rounded-2xl shadow-lg"
           >
             <p className="text-lg text-gray-600">
-              Tidak ada data sensor terbaru untuk {house.name}. Pastikan backend mengirim data ke Firestore.
+              Tidak ada data sensor terbaru untuk {house.name}. Pastikan perangkat terhubung dan mengirim data ke Firestore.
             </p>
+            <button
+              onClick={() => window.location.reload()}
+              className="mt-4 px-4 py-2 bg-blue-600 text-white rounded-lg"
+            >
+              Coba Lagi
+            </button>
           </motion.div>
         )}
       </div>
@@ -263,4 +301,3 @@ const Dashboard = () => {
 };
 
 export default Dashboard;
-// ========

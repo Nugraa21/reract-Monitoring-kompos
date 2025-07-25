@@ -1,10 +1,10 @@
 import { NavLink, useLocation } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { FaHome, FaPlug, FaBars, FaTimes, FaCog } from 'react-icons/fa';
+import { FaHome, FaHistory, FaBars, FaTimes, FaCog } from 'react-icons/fa';
 
 const navItems = [
   { name: 'Beranda', path: '/', icon: <FaHome />, ariaLabel: 'Beranda' },
-  { name: 'Koneksi', path: '/koneksi', icon: <FaPlug />, ariaLabel: 'Koneksi' },
+  { name: 'History', path: '/history', icon: <FaHistory />, ariaLabel: 'Riwayat' },
   { name: 'Pengaturan', path: '/settings', icon: <FaCog />, ariaLabel: 'Pengaturan' },
 ];
 
