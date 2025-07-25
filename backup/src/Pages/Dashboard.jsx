@@ -77,6 +77,7 @@ const Dashboard = () => {
           setLatestData(null);
           setError(`Tidak ada data sensor untuk ${rumahId}.`);
         }
+        // isLoading tidak diatur ulang di sini karena sudah ditangani di useEffect pertama
       },
       (err) => {
         console.error('Dashboard - Error fetching data:', err);
@@ -88,57 +89,55 @@ const Dashboard = () => {
   }, [rumahId, error]);
 
   // Menghitung status secara lokal
-  const calculateStatus = async () => {
+  const calculateStatus = () => {
     if (!latestData || !house) return;
 
     try {
       const settingsRef = doc(db, 'settings', rumahId);
-      const settingsDoc = await getDoc(settingsRef);
-      const defaultSettings = {
-        compostTempNormal: 25,
-        compostTempCheck: 32.5,
-        compostTempFull: 40,
-        compostVolumeNormal: 50,
-        compostVolumeCheck: 75,
-        compostVolumeFull: 100,
-        trashVolumeNormal: 50,
-        trashVolumeCheck: 75,
-        trashVolumeFull: 100,
-      };
-      const settings = settingsDoc.exists() ? settingsDoc.data() : defaultSettings;
+      getDoc(settingsRef).then((settingsDoc) => {
+        const defaultSettings = {
+          compostTempNormal: 34,
+          compostTempCheck: 39.5,
+          compostTempFull: 40,
+          compostVolumeNormal: 50,
+          compostVolumeCheck: 75,
+          compostVolumeFull: 100,
+          trashVolumeNormal: 50,
+          trashVolumeCheck: 75,
+          trashVolumeFull: 100,
+        };
+        const settings = settingsDoc.exists() ? settingsDoc.data() : defaultSettings;
 
-      const validatedSettings = {};
-      Object.keys(defaultSettings).forEach((key) => {
-        validatedSettings[key] = isNaN(parseFloat(settings[key])) ? defaultSettings[key] : parseFloat(settings[key]);
+        const validatedSettings = {};
+        Object.keys(defaultSettings).forEach((key) => {
+          validatedSettings[key] = isNaN(parseFloat(settings[key])) ? defaultSettings[key] : parseFloat(settings[key]);
+        });
+
+        const compostData = {
+          suhu: parseFloat(latestData.suhu) || 0,
+          volume: parseFloat(latestData.jarak1) || 0,
+        };
+        const trashData = { volume: parseFloat(latestData.jarak2) || 0 };
+
+        const compostStatus =
+          compostData.suhu >= validatedSettings.compostTempFull || compostData.volume >= validatedSettings.compostVolumeFull
+            ? 'Penuh'
+            : compostData.suhu >= validatedSettings.compostTempCheck || compostData.volume >= validatedSettings.compostVolumeCheck
+            ? 'Perlu Diperiksa'
+            : 'Normal';
+        const trashStatus =
+          trashData.volume >= validatedSettings.trashVolumeFull
+            ? 'Penuh'
+            : trashData.volume >= validatedSettings.trashVolumeCheck
+            ? 'Perlu Diperiksa'
+            : 'Normal';
+
+        setHouse(prev => ({ ...prev, compostStatus, trashStatus }));
+        console.log(`Dashboard - Calculated statuses locally: compost=${compostStatus}, trash=${trashStatus}`);
+      }).catch((err) => {
+        console.error('Dashboard - Error fetching settings:', err);
+        setError('Gagal memuat pengaturan: ' + err.message);
       });
-
-      const compostData = {
-        suhu: parseFloat(latestData.suhu) || 0,
-        volume: parseFloat(latestData.jarak1) || 0,
-      };
-      const trashData = { volume: parseFloat(latestData.jarak2) || 0 };
-
-      const compostTempStatus =
-        compostData.suhu >= validatedSettings.compostTempFull
-          ? 'Penuh'
-          : compostData.suhu >= validatedSettings.compostTempCheck
-          ? 'Perlu Diperiksa'
-          : 'Normal';
-      const compostVolumeStatus =
-        compostData.volume >= validatedSettings.compostVolumeFull
-          ? 'Penuh'
-          : compostData.volume >= validatedSettings.compostVolumeCheck
-          ? 'Perlu Diperiksa'
-          : 'Normal';
-      const trashStatus =
-        trashData.volume >= validatedSettings.trashVolumeFull
-          ? 'Penuh'
-          : trashData.volume >= validatedSettings.trashVolumeCheck
-          ? 'Perlu Diperiksa'
-          : 'Normal';
-
-      setHouse(prev => ({ ...prev, compostTempStatus, compostVolumeStatus, trashStatus }));
-      console.log(`Dashboard - Calculated statuses: compostTemp=${compostTempStatus}, compostVolume=${compostVolumeStatus}, trash=${trashStatus}`);
     } catch (err) {
       console.error('Dashboard - Error calculating status:', err);
       setError('Gagal menghitung status: ' + err.message);
@@ -226,39 +225,23 @@ const Dashboard = () => {
                     <span className="font-medium">{(parseFloat(latestData.suhu) || 0).toFixed(1)}°C</span>
                   </div>
                   <div className="flex justify-between">
-                    <span>Status Suhu</span>
-                    <span
-                      className={`px-3 py-1 rounded-full text-sm font-medium ${
-                        house.compostTempStatus === 'Normal'
-                          ? 'bg-green-100 text-green-700'
-                          : house.compostTempStatus === 'Perlu Diperiksa'
-                          ? 'bg-yellow-100 text-yellow-700'
-                          : house.compostTempStatus === 'Penuh'
-                          ? 'bg-red-100 text-red-700'
-                          : 'bg-gray-100 text-gray-700'
-                      }`}
-                    >
-                      {house.compostTempStatus || 'Menunggu data'}
-                    </span>
-                  </div>
-                  <div className="flex justify-between">
                     <span>Volume</span>
                     <span className="font-medium">{(parseFloat(latestData.jarak1) || 0)}%</span>
                   </div>
-                  <div className="flex justify-between">
-                    <span>Status Volume</span>
+                  <div className="flex justify-between items-center">
+                    <span>Status</span>
                     <span
                       className={`px-3 py-1 rounded-full text-sm font-medium ${
-                        house.compostVolumeStatus === 'Normal'
+                        house.compostStatus === 'Normal'
                           ? 'bg-green-100 text-green-700'
-                          : house.compostVolumeStatus === 'Perlu Diperiksa'
+                          : house.compostStatus === 'Perlu Diperiksa'
                           ? 'bg-yellow-100 text-yellow-700'
-                          : house.compostVolumeStatus === 'Penuh'
+                          : house.compostStatus === 'Penuh'
                           ? 'bg-red-100 text-red-700'
                           : 'bg-gray-100 text-gray-700'
                       }`}
                     >
-                      {house.compostVolumeStatus || 'Menunggu data'}
+                      {house.compostStatus || 'Menunggu data'}
                     </span>
                   </div>
                 </div>
