@@ -52,7 +52,7 @@ const NavBar = ({ isSidebarOpen, toggleSidebar }) => {
       >
         {isSidebarOpen && (
           <div className="flex items-center justify-between mb-6 px-2">
-            <h1 className="text-xl font-bold text-green-600">IoT Dashboard</h1>
+            <h1 className="text-xl font-bold text-green-600">SIMPODA</h1>
             <button
               onClick={toggleSidebar}
               className="p-2 rounded-full hover:bg-gray-200 text-gray-600"
