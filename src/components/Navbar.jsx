@@ -1,12 +1,14 @@
 import { NavLink, useLocation } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { FaHome, FaHistory, FaBars, FaTimes, FaCog, FaPlus } from 'react-icons/fa';
+import { FaBookOpen ,FaHome, FaHistory, FaBars, FaTimes, FaCog, FaPlus } from 'react-icons/fa';
 import { useState } from 'react';
 
 const navItems = [
   { name: 'Beranda', path: '/', icon: <FaHome />, ariaLabel: 'Beranda' },
   { name: 'Riwayat', path: '/history', icon: <FaHistory />, ariaLabel: 'Riwayat' },
+  { name: 'Blog', path: '/blog', icon: <FaBookOpen />, ariaLabel: 'Edukasi' },
   { name: 'Pengaturan', path: '/settings', icon: <FaCog />, ariaLabel: 'Pengaturan' },
+
 ];
 
 const navItemVariants = {

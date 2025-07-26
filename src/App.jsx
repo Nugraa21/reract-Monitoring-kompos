@@ -5,6 +5,7 @@ import Settings from './Pages/Settings';
 import Dashboard from './Pages/Dashboard';
 import History from './Pages/History';
 import { useState } from 'react';
+import Blog from  './Pages/blog';
 
 const App = () => {
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
@@ -27,6 +28,7 @@ const App = () => {
           <Routes>
             <Route path="/" element={<Home />} />
             <Route path="/history" element={<History />} />
+            <Route path="/Blog" element={<Blog />} />
             <Route path="/settings" element={<Settings />} />
             <Route path="/dashboard/:rumahId" element={<Dashboard />} />
           </Routes>
