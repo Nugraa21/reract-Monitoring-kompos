@@ -167,7 +167,7 @@ const NavBar = ({ isSidebarOpen, toggleSidebar }) => {
             </NavLink>
           ))}
           {/* Floating Action Button */}
-          <motion.div
+          {/* <motion.div
             className="absolute -top-6 left-1/2 transform -translate-x-1/2"
             whileHover={{ scale: 1.1 }}
             whileTap={{ scale: 0.95 }}
@@ -179,7 +179,7 @@ const NavBar = ({ isSidebarOpen, toggleSidebar }) => {
             >
               <FaPlus className="text-xl" />
             </button>
-          </motion.div>
+          </motion.div> */}
           {navItems.slice(2).map((item, index) => (
             <NavLink
               key={item.name}
