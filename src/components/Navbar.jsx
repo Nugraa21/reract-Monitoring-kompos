@@ -4,7 +4,7 @@ import { FaHome, FaHistory, FaBars, FaTimes, FaCog } from 'react-icons/fa';
 
 const navItems = [
   { name: 'Beranda', path: '/', icon: <FaHome />, ariaLabel: 'Beranda' },
-  { name: 'History', path: '/history', icon: <FaHistory />, ariaLabel: 'Riwayat' },
+  { name: 'Riwayat', path: '/history', icon: <FaHistory />, ariaLabel: 'Riwayat' },
   { name: 'Pengaturan', path: '/settings', icon: <FaCog />, ariaLabel: 'Pengaturan' },
 ];
 
@@ -47,30 +47,34 @@ const NavBar = ({ isSidebarOpen, toggleSidebar }) => {
       <motion.nav
         animate={{ width: isSidebarOpen ? 256 : 64 }}
         transition={{ type: 'spring', stiffness: 120, damping: 20 }}
-        className="hidden md:flex md:flex-col md:fixed md:top-0 md:left-0 md:h-full md:bg-white/90 md:backdrop-blur-xl md:shadow-2xl md:p-4 md:border-r md:border-gray-200 md:z-50"
+        className="hidden md:flex md:flex-col md:fixed md:top-0 md:left-0 md:h-full bg-white/20 backdrop-blur-2xl shadow-lg p-4 border-r border-white/30 z-50"
         style={{ fontFamily: 'Poppins, sans-serif' }}
       >
         {isSidebarOpen && (
           <div className="flex items-center justify-between mb-6 px-2">
             <h1 className="text-xl font-bold text-green-600">IoT Dashboard</h1>
-            <button
+            <motion.button
+              whileHover={{ scale: 1.1, rotate: 90 }}
+              whileTap={{ scale: 0.9 }}
               onClick={toggleSidebar}
-              className="p-2 rounded-full hover:bg-gray-200 text-gray-600"
+              className="p-2 rounded-full bg-white/30 hover:bg-white/50 text-gray-800"
               aria-label="Tutup Sidebar"
             >
               <FaTimes />
-            </button>
+            </motion.button>
           </div>
         )}
         {!isSidebarOpen && (
           <div className="flex justify-center mb-6">
-            <button
+            <motion.button
+              whileHover={{ scale: 1.1 }}
+              whileTap={{ scale: 0.9 }}
               onClick={toggleSidebar}
-              className="p-2 rounded-full hover:bg-gray-200 text-gray-600"
+              className="p-2 rounded-full bg-white/30 hover:bg-white/50 text-gray-800"
               aria-label="Buka Sidebar"
             >
               <FaBars />
-            </button>
+            </motion.button>
           </div>
         )}
         <div className="flex flex-col space-y-2">
@@ -81,11 +85,11 @@ const NavBar = ({ isSidebarOpen, toggleSidebar }) => {
               className={({ isActive }) =>
                 `flex items-center ${
                   isSidebarOpen ? 'space-x-3 p-3' : 'justify-center p-2'
-                } rounded-lg ${
+                } rounded-xl ${
                   isActive
-                    ? 'bg-green-500 text-white'
-                    : 'text-gray-600 hover:bg-gradient-to-r hover:from-green-50 hover:to-teal-50 hover:text-green-600'
-                } transition-all duration-300`
+                    ? 'bg-green-500/70 text-white backdrop-blur-sm'
+                    : 'text-gray-800 hover:bg-white/30 hover:text-green-600'
+                } transition-all duration-300 relative`
               }
               aria-label={item.ariaLabel}
             >
@@ -94,14 +98,20 @@ const NavBar = ({ isSidebarOpen, toggleSidebar }) => {
                 variants={navItemVariants}
                 initial="initial"
                 animate="animate"
-                whileHover={{ scale: 1.1 }}
+                whileHover={{ scale: 1.2 }}
                 whileTap={{ scale: 0.95 }}
-                transition={{ type: 'spring', stiffness: 200, damping: 15 }}
                 className="text-xl"
               >
                 {item.icon}
               </motion.div>
               {isSidebarOpen && <span className="text-sm font-medium">{item.name}</span>}
+              {location.pathname === item.path && isSidebarOpen && (
+                <motion.div
+                  className="absolute left-0 top-0 h-full w-1  rounded-r"
+                  layoutId="sidebarIndicator"
+                  transition={{ type: 'spring', stiffness: 200, damping: 20 }}
+                />
+              )}
             </NavLink>
           ))}
         </div>
@@ -111,7 +121,7 @@ const NavBar = ({ isSidebarOpen, toggleSidebar }) => {
         initial={{ y: 100, opacity: 0 }}
         animate={{ y: 0, opacity: 1 }}
         transition={{ type: 'spring', stiffness: 120, damping: 20, delay: 0.2 }}
-        className="md:hidden fixed bottom-0 left-0 right-0 bg-white/90 backdrop-blur-xl shadow-2xl p-4 flex items-center border-t border-gray-200 z-50"
+        className="md:hidden fixed bottom-0 left-0 right-0 bg-white/20 backdrop-blur-2xl shadow-lg p-4 flex items-center border-t border-white/30 z-50"
         style={{ fontFamily: 'Poppins, sans-serif' }}
       >
         <div className="flex justify-around items-center w-full">
@@ -121,7 +131,7 @@ const NavBar = ({ isSidebarOpen, toggleSidebar }) => {
               to={item.path}
               className={({ isActive }) =>
                 `flex flex-col items-center space-y-1 group relative ${
-                  isActive ? 'text-green-600' : 'text-gray-600 hover:text-green-600'
+                  isActive ? 'text-green-600' : 'text-gray-800 hover:text-green-600'
                 } transition-all duration-300`
               }
               aria-label={item.ariaLabel}
@@ -131,10 +141,9 @@ const NavBar = ({ isSidebarOpen, toggleSidebar }) => {
                 variants={bottomNavItemVariants}
                 initial="initial"
                 animate="animate"
-                whileHover={{ scale: 1.15 }}
+                whileHover={{ scale: 1.2 }}
                 whileTap={{ scale: 0.95 }}
-                transition={{ type: 'spring', stiffness: 200, damping: 15 }}
-                className="p-2.5 rounded-full group-hover:bg-gradient-to-r group-hover:from-green-50 group-hover:to-teal-50"
+                className="p-2.5 rounded-full bg-white/30 group-hover:bg-white/50"
               >
                 {item.icon}
               </motion.div>
