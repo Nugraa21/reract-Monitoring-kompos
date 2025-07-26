@@ -34,7 +34,7 @@ const Settings = () => {
     <div className="p-8 min-h-screen bg-gradient-to-br from-indigo-50 via-teal-100 to-blue-200" style={{ fontFamily: 'Poppins, sans-serif' }}>
       <div className="max-w-4xl mx-auto">
         <div className="flex items-center mb-10">
-          <motion.div
+          {/* <motion.div
             initial={{ opacity: 0, scale: 0.8 }}
             animate={{ opacity: 1, scale: 1 }}
             whileHover={{ scale: 1.05, boxShadow: '0 8px 16px rgba(0,0,0,0.2)' }}
@@ -49,7 +49,7 @@ const Settings = () => {
               <FaArrowLeft className="text-xl animate-pulse" />
               <span>Kembali</span>
             </Link>
-          </motion.div>
+          </motion.div> */}
           <h1 className="text-4xl md:text-5xl font-extrabold text-gray-800">
             Pengaturan Sistem
           </h1>

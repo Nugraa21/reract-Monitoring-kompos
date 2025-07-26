@@ -117,7 +117,7 @@ const History = () => {
       <div className="max-w-6xl mx-auto">
         <div className="flex flex-col sm:flex-row items-center justify-between mb-10">
           <div className="flex items-center mb-4 sm:mb-0">
-            <motion.div
+            {/* <motion.div
               initial={{ opacity: 0, scale: 0.8 }}
               animate={{ opacity: 1, scale: 1 }}
               whileHover={{ scale: 1.05, boxShadow: '0 8px 16px rgba(0,0,0,0.2)' }}
@@ -132,7 +132,7 @@ const History = () => {
                 <FaArrowLeft className="text-xl animate-pulse" />
                 <span>Kembali</span>
               </Link>
-            </motion.div>
+            </motion.div> */}
             <h1 className="text-4xl md:text-5xl font-extrabold text-gray-800">
               Riwayat Data Sensor
             </h1>
