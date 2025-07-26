@@ -16,22 +16,6 @@ const Blog = () => {
       <div className="max-w-4xl mx-auto">
         {/* Header with Back Button */}
         <div className="flex items-center mb-10">
-          <motion.div
-            initial={{ opacity: 0, scale: 0.8 }}
-            animate={{ opacity: 1, scale: 1 }}
-            whileHover={{ scale: 1.05, boxShadow: '0 8px 16px rgba(0,0,0,0.2)' }}
-            whileTap={{ scale: 0.95 }}
-            className="mr-4"
-          >
-            <Link
-              to="/"
-              className="flex items-center gap-2 px-4 py-3 bg-white/30 backdrop-blur-md rounded-xl border border-white/20 text-gray-800 font-semibold hover:bg-gradient-to-r hover:from-indigo-600 hover:to-teal-600 hover:text-white transition-all duration-300 shadow-md"
-              aria-label="Kembali ke Beranda"
-            >
-              <FaArrowLeft className="text-xl animate-pulse" />
-              <span>Kembali</span>
-            </Link>
-          </motion.div>
           <h1 className="text-4xl md:text-5xl font-extrabold text-gray-800">
             Edukasi Pengolahan Kompos
           </h1>
